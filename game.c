@@ -19,10 +19,12 @@
 
 
 static int k=1;
+static int t=0;
 	
 
 static GtkWidget* wid[17][20], *window, *window_board;
 GtkWidget *hbox_lon,*vbox,*hbox,*separator,*button,*button_quit;
+GtkWidget *entry_moi,*hbox_list,*button_moi;
 GtkWidget *label,*vbox1,*hbox1,*hbox2,*entry,*button_connect,*image;
 
 
@@ -53,27 +55,8 @@ fd_set readfds, testfds, clientfds;
 char msg[MSG_SIZE + 1];     
 char kb_msg[MSG_SIZE + 10];
 
+static void notice_end(char *text);
 
-void refresh_board(){
-	// int i,j;
-	// for(i=0;i<17;i++)
-	// {	
-	// 	for(j=0;j<20;j++)
-	// 	{
-	// 		gchar pos[4];
-	// 		sprintf(pos, "%d-%d", i, j);
-	// 		wid[i][j]=gtk_button_new();
-	// 		gtk_widget_set_name(wid[i][j],pos);
-
-	// 		gtk_widget_set_size_request(wid[i][j],40,40);
-	// 		gtk_box_pack_start(GTK_BOX(hbox),wid[i][j],0,1,0);
-			
-	// 		//g_signal_connect(wid[i][j],"clicked",G_CALLBACK(nuoc_di),NULL);
-
-	// 	}
-	// }
-
-}
 static void notice(char *text)
 {
 	GtkWidget *window=gtk_window_new(GTK_WINDOW_POPUP);
@@ -84,20 +67,6 @@ static void notice(char *text)
 	gtk_widget_destroy(dialog);
 }
 
-static void notice_end(char *text)
-{
-	
-	GtkWidget *window=gtk_window_new(GTK_WINDOW_POPUP);
-	GtkWidget *dialog,*button;
-	button = gtk_button_new_with_label("OK");
-	g_signal_connect(button,"clicked",G_CALLBACK(refresh_board),NULL);
-
-	
-	dialog = gtk_message_dialog_new ((GtkWindow*)window, GTK_DIALOG_MODAL,
-		GTK_MESSAGE_INFO,GTK_BUTTONS_OK,text);
-	
-	gtk_widget_destroy(dialog);
-}
 
 
 
@@ -145,6 +114,7 @@ static void button_moi_clicked(GtkWidget *widget,gpointer data)
 
 static void nuoc_di(GtkWidget *widget,gpointer data)
     {	
+    	printf("1\n");
     	GtkWidget *button;
 
     	GtkWidget *button_image_x = gtk_image_new_from_file("icon/x2.png");
@@ -157,7 +127,7 @@ static void nuoc_di(GtkWidget *widget,gpointer data)
     	int x,y,check;
     	strcpy(pos2,"MOVE ");
     	strcat(pos2, gtk_widget_get_name(widget));
-		//printf("%s\n", pos2);
+		printf("%s\n", pos2);
     	char *saveptr;
     	char *foo, *bar;
     	if (flag == 0)
@@ -199,7 +169,8 @@ static void nuoc_di(GtkWidget *widget,gpointer data)
 		check = checkWinning(1, x, y, komoku);//printf("%d\n",check);
 		if(check == 1){
 			write(sockfd,"END\n",4);
-			notice("YOU WIN!");
+			notice_end("YOU WIN!");
+
 			
 		}
 		
@@ -217,7 +188,8 @@ static void nuoc_di(GtkWidget *widget,gpointer data)
 		if(check == 1)
 		{
 			write(sockfd,"END\n",4);
-			notice("YOU WIN!");
+			notice_end("YOU WIN!");
+	
 			
 		}
 		//g_print("%d",k);
@@ -228,9 +200,54 @@ static void nuoc_di(GtkWidget *widget,gpointer data)
     	}
     	printf("\n");
 	}*/
-	block_board();
+	if (check != 1) block_board();
 
 }
+void refresh_board(){
+	gtk_widget_destroy(window_board);
+	vbox=gtk_box_new(GTK_ORIENTATION_VERTICAL,0);		
+	window_board=gtk_window_new(GTK_WINDOW_TOPLEVEL);
+	label=gtk_label_new("Fight!");
+	gtk_box_pack_start(GTK_BOX(vbox),label,0,0,0);
+	int i,j;
+	for(i=0;i<17;i++)
+	{
+		hbox=gtk_box_new(GTK_ORIENTATION_HORIZONTAL,0);		
+		for(j=0;j<20;j++)
+		{
+			wid[i][j]=gtk_button_new();
+			gchar pos[4];
+			sprintf(pos, "%d-%d", i, j);
+			gtk_widget_set_name(wid[i][j],pos);
+			komoku[i][j]=0;
+			
+			gtk_widget_set_size_request(wid[i][j],40,40);
+			gtk_box_pack_start(GTK_BOX(hbox),wid[i][j],0,1,0);
+			
+			g_signal_connect(wid[i][j],"clicked",G_CALLBACK(nuoc_di),NULL);
+			
+		}
+
+		gtk_box_pack_start(GTK_BOX(vbox),hbox,0,0,0);
+	}
+	gtk_container_add(GTK_CONTAINER(window_board),vbox);
+	gtk_widget_show_all(window_board);
+}
+
+static void notice_end(char *text)
+{
+	
+	GtkWidget *window_end=gtk_window_new(GTK_WINDOW_POPUP);
+	GtkWidget *dialog,*button;
+	dialog = gtk_message_dialog_new ((GtkWindow*)window_end, GTK_DIALOG_MODAL,
+		GTK_MESSAGE_INFO,GTK_BUTTONS_OK,text);
+	
+	gtk_dialog_run(dialog);
+	gtk_widget_destroy(dialog);
+	refresh_board();
+}
+
+
 void block_board(){
 	int i,j;
 	for(i=0;i<17;i++)
@@ -275,6 +292,7 @@ static void on_accept(GtkWidget* widget,gpointer data)
     gtk_widget_destroy (GTK_WIDGET (data));
     unblock_board();
     gtk_widget_set_sensitive(button_quit,TRUE);
+    gtk_widget_show_all(window_board);
 
 	
  //    gdk_threads_enter();
@@ -316,6 +334,8 @@ on_response (GtkDialog *dialog,
   /*This will cause the dialog to be destroyed*/
   gtk_widget_destroy (GTK_WIDGET (dialog));
 }
+
+ 
 
 static void show_list(GtkWidget* widget,gpointer data)
 {
@@ -362,12 +382,14 @@ static void show_list(GtkWidget* widget,gpointer data)
 	gtk_box_pack_start(GTK_BOX(vbox_list),view,0,0,10);	
   	
 
-	 GtkWidget *entry_moi,*hbox_list,*button_moi;
+	 
 	 entry_moi=gtk_entry_new();
 	 gtk_entry_set_max_length (GTK_ENTRY(entry_moi),50);
 	 gtk_entry_set_placeholder_text (GTK_ENTRY(entry_moi),"Nhap ten nguoi choi muon thach dau");
+	
 	 button_moi=gtk_button_new_with_label("Thach dau");
 	 g_signal_connect(button_moi,"clicked",G_CALLBACK(button_moi_clicked), entry_moi);
+	 if (t==0) gtk_widget_set_sensitive(button_moi,FALSE);
 
 	hbox_list=gtk_box_new(GTK_ORIENTATION_HORIZONTAL,0);
 	gtk_box_pack_start(GTK_BOX(hbox_list),entry_moi,1,1,10);	
@@ -452,7 +474,9 @@ static void roi_phong(GtkWidget *widget,gpointer data){
 	k=1;
 	gtk_widget_set_sensitive(button_quit,FALSE);
 	notice("Ban da roi khoi phong choi");
-	block_board();
+
+	refresh_board();
+	gtk_widget_hide (window_board);
 }
 
 
@@ -467,11 +491,11 @@ void initBoard(int argc, char*argv[]){
 	
 	
 	window=gtk_window_new(GTK_WINDOW_TOPLEVEL);
-	window2=gtk_window_new(GTK_WINDOW_TOPLEVEL);
-	gtk_widget_set_size_request(window,1000,1000);
+	window_board=gtk_window_new(GTK_WINDOW_TOPLEVEL);
+	gtk_widget_set_size_request(window,500,500);
 	gtk_window_set_position (GTK_WINDOW(window), GTK_WIN_POS_CENTER);
 	
-	vbox=gtk_box_new(GTK_ORIENTATION_VERTICAL,0);
+	
 
 	
 	
@@ -491,7 +515,7 @@ void initBoard(int argc, char*argv[]){
 	gtk_box_pack_start(GTK_BOX(vbox),menu_bar,0,0,0);
 */
 //Ban co
-
+	vbox=gtk_box_new(GTK_ORIENTATION_VERTICAL,0);
 	label=gtk_label_new("Fight!");
 	gtk_box_pack_start(GTK_BOX(vbox),label,0,0,0);
 	for(i=0;i<17;i++)
@@ -591,7 +615,7 @@ void initBoard(int argc, char*argv[]){
 
 
 
-	label=gtk_label_new("\n\n\n\n\n____Nhom thuc hien____\n          Phan Bao Hung\n        Nguyen Duc Toan    \n            Le Minh Duc     ");
+	label=gtk_label_new("\n\n____Nhom thuc hien____\n          Phan Bao Hung\n        Nguyen Duc Toan    \n            Le Minh Duc     ");
 	
 //box pack
 	vbox1=gtk_box_new(GTK_ORIENTATION_VERTICAL,10);
@@ -605,14 +629,18 @@ void initBoard(int argc, char*argv[]){
 	//gtk_widget_set_size_request(vbox,600,400);
 	
 
-	hbox_lon=gtk_box_new(GTK_ORIENTATION_HORIZONTAL,0);
+	//hbox_lon=gtk_box_new(GTK_ORIENTATION_HORIZONTAL,0);
 	
-	gtk_box_pack_start(GTK_BOX(hbox_lon),vbox1,0,0,0);
-	gtk_box_pack_start(GTK_BOX(hbox_lon),vbox,0,0,0);
+	// gtk_box_pack_start(GTK_BOX(hbox_lon),vbox1,0,0,0);
+	// gtk_box_pack_start(GTK_BOX(hbox_lon),vbox,0,0,0);
 	
 	g_signal_connect(window,"destroy",G_CALLBACK(gtk_main_destroy),NULL);
-	gtk_container_add(GTK_CONTAINER(window),hbox_lon);
+	gtk_container_add(GTK_CONTAINER(window),vbox1);
+	gtk_container_add(GTK_CONTAINER(window_board),vbox);
 	gtk_widget_show_all(window);
+	//g_signal_connect(window_board,"destroy",G_CALLBACK(roi_phong),NULL);
+	//gtk_widget_show_all(window_board);
+
 
 }
 
@@ -683,6 +711,7 @@ static void receivedCmd(){
 					else if (strncmp(msg,"ACCEPTED",8)==0) {
 					 	gdk_threads_enter();
 					 	gtk_widget_set_sensitive(button_quit,TRUE);
+					 	gtk_widget_show_all(window_board);
 					 	gdk_threads_leave();
 					// 
 					}
@@ -707,6 +736,7 @@ static void receivedCmd(){
 						gdk_threads_enter();
 						notice("Set name success !");
     					gtk_widget_set_sensitive (button_connect,FALSE);
+    					t=1;
     					gtk_widget_set_sensitive (entry,FALSE);
     					gdk_threads_leave();     		
     		 		}
@@ -717,10 +747,20 @@ static void receivedCmd(){
 						
 						gdk_threads_leave();
 					}
+					else if (strncmp(msg,"EXIT",4)==0) {
+						gdk_threads_enter();
+
+						notice("Opponent has left room");
+						refresh_board();
+						gtk_widget_hide(window_board);
+						gtk_widget_set_sensitive(button_quit,FALSE);
+						gdk_threads_leave();
+					}
 					else if (strncmp(msg,"END",3)==0) {
 						gdk_threads_enter();
 
-						notice("YOU LOSE!");
+						notice_end("YOU LOSE!");
+						block_board();
 						
 						gdk_threads_leave();
 

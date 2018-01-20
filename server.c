@@ -154,11 +154,11 @@ int main(int argc, char *argv[]) {
 			char* buffer = strtok(buffer1, " ");
 			buffer = strtok(NULL, " ");buffer[strlen(buffer)-1]='\0';
 			if (getFD(user_list,buffer) != -1) {
-				strcpy(kb_msg,"Ten user da ton tai\n");
+				strcpy(kb_msg,"SETFAIL\n");
 				write(fd,kb_msg,strlen(kb_msg));
 			}
 			else {
-			push(&user_list,fd,0,buffer);
+			push(&user_list,fd,0,-1,buffer);
 	      		printf("User from socket %d register username %s\n",user_list[0].data,user_list[0].username);
 	      		strcpy(kb_msg,"OK\n");
                         //write(fd,kb_msg,strlen(kb_msg));
@@ -175,7 +175,7 @@ int main(int argc, char *argv[]) {
 	      		//strcpy(buffer,getList(user_list));
 	      		int len = strlen(getList(user_list));
 	      		
-			write(fd,getList(user_list),len);
+			      write(fd,getList(user_list),len);
 	     
 	    	    }
 		    else if (strncmp(buffer1,"CHALLENGE",9) == 0) {
@@ -183,28 +183,42 @@ int main(int argc, char *argv[]) {
 		      // buffer chua username bi thach dau
 		      char* buffer = strtok(buffer1, " ");
 		      buffer = strtok(NULL, " ");buffer[strlen(buffer)-1]='\0';
+          //printf("ab\n");
+          // kiem tra user co available khong
+          if (getFD(user_list,buffer) == -1 || getFD(user_list,buffer) == fd) {
+              strcpy(buffer2,"INVALID\n");
+              write(fd,buffer2,strlen(buffer2));
+              continue;
+          }
+          if (getRoomByFD(user_list,getFD(user_list,buffer)) != 0 ) {
+              strcpy(buffer2,"UNAVAILABLE\n");
+              write(fd,buffer2,strlen(buffer2));
+              continue;
+          }
 	
 		      // send loi thach dau den user bi thach dau
+          strcat(buffer2,"CHALLENGED ");
 		      strcat(buffer2,getUsername(user_list,fd));
-		      strcat(buffer2," thach dau. ACCEPT ?\n");
+		      strcat(buffer2,"\n");
 		      int len = strlen(buffer2);
 		      //printf("%d\n",getFD(user_list,buffer));
-		      write(getFD(user_list,buffer),buffer2,len);
+		      write(getFD(user_list,buffer),buffer2,strlen(buffer2));
 		    }
 		    else if (strncmp(buffer1,"ACCEPT",6) == 0) {
 	   		// buffer chua username thach dau
 	      		char* buffer = strtok(buffer1, " ");
 	      		buffer = strtok(NULL, " ");buffer[strlen(buffer)-1]='\0';      
-	     		strcat(buffer2,getUsername(user_list,fd));
-	      		strcat(buffer2," chap nhan thach dau.\n");
+	     		  //strcat(buffer2,getUsername(user_list,fd));
+	      		//strcat(buffer2," chap nhan thach dau.\n");
+            strcpy(buffer2,"ACCEPTED\n");
 	      		int len = strlen(buffer2);
 	      		
-			write(getFD(user_list,buffer),buffer2,len);
+			      write(getFD(user_list,buffer),buffer2,len);
 	      		
 	      		int new_room = availableRoom(user_list);
-			printf("room: %d\n",new_room);
-	      		generateRoom(user_list,getFD(user_list,buffer),new_room);
-	      		generateRoom(user_list,fd,new_room);
+			      printf("room: %d\n",new_room);
+	      		generateRoom(user_list,getFD(user_list,buffer),new_room,0);
+	      		generateRoom(user_list,fd,new_room,1);
 	    	    }
 		    
 		    else if (strncmp(buffer1,"REFUSE",6) == 0) {
@@ -226,17 +240,24 @@ int main(int argc, char *argv[]) {
 			   char* buffer = strtok(buffer1, " ");
 	      		   buffer = strtok(NULL, " ");
 			   strcpy(buffer2,buffer);buffer[strlen(buffer)-1]='\0';	
-			   write(getOtherFDByRoom(user_list,room,fd),buffer2,strlen(buffer2));
+			   write(getOtherFDByRoom(user_list,room,fd),msg,strlen(msg));
 			   printf("Nuoc di %s tu %s da duoc gui den %s\n",buffer,getUsername(user_list,fd),getUsername(user_list,getOtherFDByRoom(user_list,room,fd)));
 			}
 		    }
+        else if (strncmp(buffer1,"END",3) == 0) {
+            int room = getRoomByFD(user_list,fd);
+         
+         write(getOtherFDByRoom(user_list,room,fd),msg,strlen(msg));
+         printf("Nuoc di %s tu %s da duoc gui den %s\n",buffer1,getUsername(user_list,fd),getUsername(user_list,getOtherFDByRoom(user_list,room,fd)));
+        }
 		    else if (strncmp(buffer1,"EXIT",4) == 0) {
 			int room = getRoomByFD(user_list,fd);
-			generateRoom(user_list,fd,0);
+			generateRoom(user_list,fd,0,-1);
 			
 			int otherfd = getOtherFDByRoom(user_list,room,fd);
-			generateRoom(user_list,otherfd,0);
+			generateRoom(user_list,otherfd,0,-1);
 			printf("Phong so %d available\n",room);
+      write(otherfd,buffer1,strlen(buffer1));
 		    }
 		    else {
                     	/*print to other clients*/

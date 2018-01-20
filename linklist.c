@@ -11,17 +11,19 @@ struct Node
 {
   int data;
   int room;
+  int xo;
   char username[30];
   struct Node *next;
 };
 
 /* Given a reference (pointer to pointer) to the head of a list
    and an int, inserts a new node on the front of the list. */
-void push(struct Node** head_ref, int new_data,int new_room, char new_string_data[])
+void push(struct Node** head_ref, int new_data,int new_room,int new_xo,char new_string_data[])
 {
   struct Node* new_node = (struct Node*) malloc(sizeof(struct Node));
   new_node->data = new_data;
   new_node->room = new_room;
+  new_node->xo = new_xo;
   strcpy(new_node->username,new_string_data);
   new_node->next = (*head_ref);
   (*head_ref)    = new_node;
@@ -97,13 +99,14 @@ char* getUsername(struct Node *node,int fd)
   return NULL;
 }
 
-void generateRoom(struct Node *node,int fd,int room)
+void generateRoom(struct Node *node,int fd,int room,int xo)
 {
  
   while (node != NULL) 
     {
       if (node->data == fd) {
-	 node->room = room;
+	       node->room = room;
+         node->xo = xo;
       }	
       node = node->next;
     }
